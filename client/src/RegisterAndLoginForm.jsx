@@ -6,13 +6,13 @@ export default function RegisterAndLoginForm() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoginOrRegister, setIsLogInOrRegister] = useState("register");
-  const {setUsername:setLoggedInUsername, setId} = useContext(UserContext);
+  const { setUsername: setLoggedInUsername, setId } = useContext(UserContext);
 
   async function handleSubmit(e) {
     e.preventDefault();
     const url = isLoginOrRegister === "register" ? "register" : "login";
 
-    const {data} = await axios.post(url, {username, password});
+    const { data } = await axios.post(url, { username, password });
     setLoggedInUsername(username);
     setId(data.id);
   }
@@ -48,11 +48,11 @@ export default function RegisterAndLoginForm() {
           )}
           {isLoginOrRegister === "login" && (
             <div>
-            Dont have an account?
-            <button onClick={() => setIsLogInOrRegister("register")}>
-              Register here
-            </button>
-          </div>
+              Dont have an account?
+              <button onClick={() => setIsLogInOrRegister("register")}>
+                Register here
+              </button>
+            </div>
           )}
         </div>
       </form>
