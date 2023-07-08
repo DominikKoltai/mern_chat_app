@@ -1,9 +1,11 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable no-unused-vars */
 import { useContext, useEffect, useRef, useState } from "react";
 import { uniqBy } from "lodash";
 import Avatar from "./Avatar";
 import Logo from "./Logo";
 import { UserContext } from "./UserContext";
+import axios from "axios";
 
 const Chat = () => {
   const [ws, setWs] = useState(null);
@@ -15,10 +17,20 @@ const Chat = () => {
   const divUnderMessages = useRef();
 
   useEffect(() => {
+    connectToWs();
+  }, []);
+
+  function connectToWs() {
     const ws = new WebSocket("ws://localhost:4000");
     setWs(ws);
     ws.addEventListener("message", handleMessage);
-  }, []);
+    ws.addEventListener("close", () => {
+      setTimeout(() => {
+        console.log("Disconnected. Trying to reconnect...");
+        connectToWs();
+      }, 1000);
+    });
+  }
 
   function showOnlinePeople(peopleArray) {
     const people = {};
@@ -30,36 +42,54 @@ const Chat = () => {
 
   function handleMessage(e) {
     const messageData = JSON.parse(e.data);
-    console.log({e, messageData});
+    console.log({ e, messageData });
     if ("online" in messageData) {
       showOnlinePeople(messageData.online);
-    } else if ('text' in messageData) {
-      setMessages(prev => ([...prev, {...messageData}]));
+    } else if ("text" in messageData) {
+      setMessages((prev) => [...prev, { ...messageData }]);
     }
   }
 
   function sendMessage(e) {
     e.preventDefault();
 
-    ws.send(JSON.stringify({
-      recipient: selectedUserId,
-      text: newMessageText,
-    }));
+    ws.send(
+      JSON.stringify({
+        recipient: selectedUserId,
+        text: newMessageText,
+      })
+    );
     setNewMessageText("");
-    setMessages(prev => ([...prev, {text: newMessageText, sender: id, recipient: selectedUserId, id: Date.now()}]));
+    setMessages((prev) => [
+      ...prev,
+      {
+        text: newMessageText,
+        sender: id,
+        recipient: selectedUserId,
+        _id: Date.now(),
+      },
+    ]);
   }
 
   useEffect(() => {
     const div = divUnderMessages.current;
     if (div) {
-      div.scrollIntoView({behavior: 'smooth', block: 'end'});
+      div.scrollIntoView({ behavior: "smooth", block: "end" });
     }
-  }, [messages])
+  }, [messages]);
+
+  useEffect(() => {
+    if (selectedUserId) {
+      axios.get("/messages/" + selectedUserId).then((res) => {
+        setMessages(res.data);
+      });
+    }
+  }, [selectedUserId]);
 
   const onlinePeopleExclOurUser = { ...onlinePeople };
   delete onlinePeopleExclOurUser[id];
 
-  const messagesWithoutDupes = uniqBy(messages, 'id');
+  const messagesWithoutDupes = uniqBy(messages, "_id");
 
   return (
     <div className="flex h-screen">
@@ -96,19 +126,28 @@ const Chat = () => {
           {!!selectedUserId && (
             <div className="relative h-full">
               <div className="overflow-y-scroll absolute top-0 left-0 right-0 bottom-2">
-                {messagesWithoutDupes.map(message => (
-                  <div key={id} className={(message.sender === id ? 'text-right' : 'text-left')}>
-                    <div className={"text-left inline-block p-2 my-2 rounded-md text-sm " +(message.sender === id ? 'bg-green-500 text-white' : 'bg-white text-gray-500')}>
-                      sender: {message.sender}<br />
-                      my id: {id}<br />
-                      {message.text}                
+                {messagesWithoutDupes.map((message) => (
+                  <div
+                    key={message._id}
+                    className={
+                      message.sender === id ? "text-right" : "text-left"
+                    }
+                  >
+                    <div
+                      className={
+                        "text-left inline-block p-2 my-2 rounded-md text-sm " +
+                        (message.sender === id
+                          ? "bg-green-500 text-white"
+                          : "bg-white text-gray-500")
+                      }
+                    >
+                      {message.text}
                     </div>
                   </div>
                 ))}
                 <div ref={divUnderMessages}></div>
               </div>
             </div>
-            
           )}
         </div>
         {!!selectedUserId && (
@@ -116,7 +155,7 @@ const Chat = () => {
             <input
               type="text"
               value={newMessageText}
-              onChange={e => setNewMessageText(e.target.value)}
+              onChange={(e) => setNewMessageText(e.target.value)}
               placeholder="Type your message here"
               className="bg-white flex-grow border rounded-sm p-2"
             />
