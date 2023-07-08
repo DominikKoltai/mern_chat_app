@@ -7,6 +7,7 @@ const bcrypt = require('bcryptjs');
 const cors = require('cors');
 const ws = require('ws');
 const User = require('./models/User');
+const Message = require('./models/Message');
 
 dotenv.config();
 mongoose.connect(process.env.MONGO_URL);
@@ -84,4 +85,24 @@ wss.on('connection', (connection, req) => {
             }
         }
     }
+
+    connection.on('message', async (message) => {
+        messageData = JSON.parse(message.toString());
+        const {recipient, text} = messageData;
+        if (recipient && text) {
+            const messageDoc = await Message.create({
+                sender: connection.userId,
+                recipient,
+                text,
+            });
+            [...wss.clients].filter(c => c.userId === recipient)
+            .forEach(c => c.send(JSON.stringify({text, sender: connection.userId, recipient, id: messageDoc._id})));
+        }
+    });
+
+    [...wss.clients].forEach(client => {
+        client.send(JSON.stringify({
+            online: [...wss.clients].map(c => ({userId:c.userId, username:c.username}))
+        }));
+    });
 });
