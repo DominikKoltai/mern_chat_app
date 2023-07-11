@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-deployment
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+        - name: api
+          image: dominikkoltai/mern_chat_app_api:latest
+          ports:
+            - containerPort: 4000
+              name: nodejs-port
+  selector:
+    matchLabels:
+      app: api
