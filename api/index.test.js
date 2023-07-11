@@ -1,52 +1,80 @@
 const request = require('supertest');
-const index = require('./index');
-const User = require('./models/User'); // Assuming you have a User model imported
+const app = require('./index');
+const User = require('./models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-// Mocking dependencies
 jest.mock('./models/User');
 jest.mock('bcryptjs');
 jest.mock('jsonwebtoken');
 
-describe('POST /register', () => {
-    test('should register a new user and return the user ID', async () => {
-      const mockUserId = 'mockUserId';
-      const mockToken = 'mockToken';
-      const mockHashedPassword = 'mockHashedPassword';
-  
-      // Mock the bcrypt.hashSync function
-      bcrypt.hashSync.mockReturnValue(mockHashedPassword);
-  
-      // Mock the User.create function
-      User.create.mockResolvedValue({ _id: mockUserId });
-  
-      // Mock the jwt.sign function
-      jwt.sign.mockImplementation((_, __, ___, callback) => {
-        callback(null, mockToken);
-      });
-  
-      // Make a request to the /register endpoint
-      const response = await request(index)
-        .post('/register')
-        .send({ username: 'testuser', password: 'testpassword' });
-  
-      // Verify the response
-      expect(response.statusCode).toBe(201);
-      expect(response.headers['set-cookie']).toContain(`token=${mockToken}`);
-      expect(response.body).toEqual({ id: mockUserId });
-  
-      // Verify the interactions with the mocked functions
-      expect(bcrypt.hashSync).toHaveBeenCalledWith('testpassword', expect.anything());
-      expect(User.create).toHaveBeenCalledWith({
-        username: 'testuser',
-        password: mockHashedPassword,
-      });
-      expect(jwt.sign).toHaveBeenCalledWith(
-        { userId: mockUserId, username: 'testuser' },
-        expect.anything(),
-        {},
-        expect.any(Function)
-      );
+describe('POST /login', () => {
+  test('should login user and return user ID', async () => {
+    const mockUsername = 'testuser';
+    const mockPassword = 'testpassword';
+    const mockToken = 'mockToken';
+    const mockFoundUser = { _id: 'mockUserId', password: 'mockHashedPassword' };
+
+    User.findOne.mockResolvedValue(mockFoundUser);
+
+    bcrypt.compareSync.mockReturnValue(true);
+
+    jwt.sign.mockImplementation((_, __, ___, callback) => {
+      callback(null, mockToken);
     });
-  });  
+
+    const response = await request(app)
+      .post('/login')
+      .send({ username: mockUsername, password: mockPassword });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toEqual({ id: mockFoundUser._id });
+
+    expect(User.findOne).toHaveBeenCalledWith({ username: mockUsername });
+    expect(bcrypt.compareSync).toHaveBeenCalledWith(mockPassword, mockFoundUser.password);
+    expect(jwt.sign).toHaveBeenCalledWith(
+      { userId: mockFoundUser._id, username: mockUsername },
+      expect.anything(),
+      {},
+      expect.any(Function)
+    );
+  });
+});
+
+describe('GET /profile', () => {
+  test('should return user data for authenticated user', async () => {
+    const mockToken = 'mockToken';
+    const mockUserData = { userId: 'mockUserId', username: 'testuser' };
+
+    // Mock the jwt.verify function
+    jwt.verify.mockImplementation((_, __, ___, callback) => {
+      callback(null, mockUserData);
+    });
+
+    // Make a request to the /profile endpoint
+    const response = await request(app)
+      .get('/profile')
+      .set('Cookie', `token=${mockToken}`);
+
+    // Verify the response
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toEqual(mockUserData);
+
+    // Verify the interactions with the mocked functions
+    expect(jwt.verify).toHaveBeenCalledWith(
+      mockToken,
+      expect.anything(),
+      {},
+      expect.any(Function)
+    );
+  });
+
+  test('should return unauthorized for unauthenticated user', async () => {
+    // Make a request to the /profile endpoint without a token
+    const response = await request(app).get('/profile');
+
+    // Verify the response
+    expect(response.statusCode).toBe(401);
+    expect(response.body).toBe('no token');
+  });
+});

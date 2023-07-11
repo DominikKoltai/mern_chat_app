@@ -127,3 +127,5 @@ wss.on('connection', (connection, req) => {
         }));
     });
 });
+
+module.exports = app;
