@@ -30,5 +30,11 @@ pipeline {
                 }
             }
         }
+        stage('Build Images') {
+            steps {
+                sh 'docker build -t dominikkoltai/mern_chat_app_client:latest client'
+                sh 'docker build -t dominikkoltai/mern_chat_app_api:latest api'
+            }
+        }
 	}
 }
