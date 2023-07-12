@@ -28,6 +28,8 @@ pipeline {
             steps {
                 dir('api') {
                     sh 'npm install'
+                    sh 'export MONGO_URL=$MONGO_URL'
+			        sh 'export JWT_SECRET=$JWT_SECRET'
                     sh 'npm run test'
                 }
             }
