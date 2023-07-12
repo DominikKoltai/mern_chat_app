@@ -13,6 +13,8 @@ pipeline {
 	stages {
 		stage('Checkout') {
 			steps {
+                echo "MONGO_URL = ${env.MONGO_URL}"
+                echo "JWT_SECRET = ${env.JWT_SECRET}"
 				checkout scm
 			}
 		}
