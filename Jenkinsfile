@@ -16,17 +16,15 @@ pipeline {
             steps {
                 dir('client') {
                     sh 'npm install'
-                    sh 'npm test'
+                    sh 'npm run test'
                 }
             }
         }
         stage('Server Tests') {
             steps {
-                dir('server') {
+                dir('api') {
                     sh 'npm install'
-                    sh 'export MONGO_URL=$MONGO_URL'
-                    sh 'export JWT_SECRET=$JWT_SECRET'
-                    sh 'npm test'
+                    sh 'npm run test'
                 }
             }
         }

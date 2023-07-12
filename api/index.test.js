@@ -46,21 +46,17 @@ describe('GET /profile', () => {
     const mockToken = 'mockToken';
     const mockUserData = { userId: 'mockUserId', username: 'testuser' };
 
-    // Mock the jwt.verify function
     jwt.verify.mockImplementation((_, __, ___, callback) => {
       callback(null, mockUserData);
     });
 
-    // Make a request to the /profile endpoint
     const response = await request(app)
       .get('/profile')
       .set('Cookie', `token=${mockToken}`);
 
-    // Verify the response
     expect(response.statusCode).toBe(200);
     expect(response.body).toEqual(mockUserData);
 
-    // Verify the interactions with the mocked functions
     expect(jwt.verify).toHaveBeenCalledWith(
       mockToken,
       expect.anything(),
@@ -70,10 +66,8 @@ describe('GET /profile', () => {
   });
 
   test('should return unauthorized for unauthenticated user', async () => {
-    // Make a request to the /profile endpoint without a token
     const response = await request(app).get('/profile');
 
-    // Verify the response
     expect(response.statusCode).toBe(401);
     expect(response.body).toBe('no token');
   });
